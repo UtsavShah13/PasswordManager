@@ -7,24 +7,26 @@
 
 import SwiftUI
 
+struct Account: Identifiable {
+    let id = UUID()
+    var name: String
+    var email: String
+    var password: String
+}
+
+
 struct HomeScreen: View {
-    @State private var accounts = [
-        Account(name: "Google", email: "user@gmail.com", password: "password123"),
-        Account(name: "LinkedIn", email: "user@linkedin.com", password: "password123"),
-        Account(name: "Twitter", email: "user@twitter.com", password: "password123"),
-        Account(name: "Facebook", email: "amitshah165@mail.com", password: "password123"),
-        Account(name: "Instagram", email: "user@instagram.com", password: "password123")
-    ]
     @State private var showingAddAccount = false
     @State private var showingAccountDetail = false
     @State private var selectedAccount: Account?
     @State private var isActive = false
-    
+    @StateObject var viewModel: ViewModel = .init()
+
     var body: some View {
         NavigationView {
             VStack {
                 List {
-                    ForEach(accounts) { account in
+                    ForEach(viewModel.accounts) { account in
                         HStack {
                             Text(account.name)
                                 .fontWeight(.bold)
@@ -66,13 +68,13 @@ struct HomeScreen: View {
                     .padding(.trailing, 21)
                 }
                 .sheet(isPresented: $showingAddAccount, content: {
-                    AddAccount(accounts: $accounts)
+                    AddAccount(accounts: $viewModel.accounts)
                         .presentationDetents([.fraction(0.5)])
                 })
                 .sheet(isPresented: $showingAccountDetail, content: {
                     if let account = selectedAccount {
-                        AccountDetails(accounts: $accounts, account: account)
-                            .presentationDetents([.fraction(0.5)])
+                        AccountDetails(account: account)
+                            .presentationDetents([.fraction(0.45)])
                     }
                 })
             }
@@ -82,26 +84,33 @@ struct HomeScreen: View {
     }
 }
 
-struct Account: Identifiable {
-    let id = UUID()
-    var name: String
-    var email: String
-    var password: String
-}
-
 struct AddAccount: View {
     @Environment(\.presentationMode) var presentationMode
     @Binding var accounts: [Account]
     @State private var name = ""
     @State private var email = ""
     @State private var password = ""
+    @State private var isPasswordVisible: Bool = false
 
     var body: some View {
-        NavigationView {
             VStack(spacing: 10, content: {
                 BorderedTextField(placeholder: "Account Name", text: $name)
                 BorderedTextField(placeholder: "Username/ Email", text: $email)
-                SecureField("Password", text: $password)
+                HStack {
+                    if isPasswordVisible {
+                        Text(password)
+                    } else {
+                        SecureField("Password", text: ($password))
+                    }
+                    Spacer()
+                    Button(action: {
+                        isPasswordVisible.toggle()
+                    }) {
+                        Image(systemName: !isPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                            .foregroundColor(.gray)
+                    }
+                }
+
                     .padding()
                     .background(Color.white)
                     .overlay(
@@ -112,9 +121,15 @@ struct AddAccount: View {
                 Spacer()
                     .frame(height: 20)
                 Button(action: {
-                    let newAccount = Account(name: name, email: email, password: password)
-                    accounts.append(newAccount)
-                    self.presentationMode.wrappedValue.dismiss()
+                    if name != "" && email != "" {
+                        if password.count > 6 {
+                            let newAccount = Account(name: name, email: email, password: password)
+                            accounts.append(newAccount)
+                            self.presentationMode.wrappedValue.dismiss()
+                        } else {
+                            print("enter valid password")
+                        }
+                    }
                 }, label: {
                     Text("Add New Account")
                         .foregroundColor(.white)
@@ -126,9 +141,7 @@ struct AddAccount: View {
 
             })
             .padding(.horizontal, 12)
-        }
-    }
-    
+        }    
 }
 
 struct BorderedTextField: View {
@@ -147,72 +160,6 @@ struct BorderedTextField: View {
     }
 }
 
-struct AccountDetails: View {
-    @Environment(\.presentationMode) var presentationMode
-    @Binding var accounts: [Account]
-    var account: Account
-
-    var body: some View {
-        VStack(alignment: .leading, content: {
-            Text("Account Details")
-                .font(.title)
-                .foregroundColor(Color.blue)
-                .background(.clear)
-                
-            Form {
-                Section(header: Text("Account Type")) {
-                    Text(account.name)
-                }
-                Section(header: Text("Username/ Email")) {
-                    Text(account.email)
-                }
-                Section(header: Text("Password")) {
-                    SecureField("Password", text: .constant(account.password))
-                }
-            }
-            .background(.clear)
-            .formStyle(.automatic)
-            
-            HStack {
-                Button(action: {
-                    // Handle edit action
-                }) {
-                    Text("Edit")
-                        .foregroundColor(.white)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(.black)
-                        .cornerRadius(10)
-                }
-                
-                Button(action: {
-                    // Handle delete action
-//                    accounts.remov
-                }) {
-                    Text("Delete")
-                        .foregroundColor(.white)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.red)
-                        .cornerRadius(10)
-                }
-            }
-            
-            .padding([.leading, .trailing, .bottom])
-        })
-  
-    }
-}
-
-
-struct ContentView: View {
-    var body: some View {
-        HomeScreen()
-    }
-}
-
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
-    }
+#Preview {
+    HomeScreen()
 }
